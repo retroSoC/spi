@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Beijing Institute of Open Source Chip
+// Copyright (c) 2023-2024 Miao Yuchi <miaoyuchi@ict.ac.cn>
 // spi is licensed under Mulan PSL v2.
 // You can use this software according to the terms and conditions of the Mulan PSL v2.
 // You may obtain a copy of Mulan PSL v2 at:
@@ -38,7 +38,7 @@ program automatic test_top (
     spi_hdl.init();
     spi_hdl.test_reset_reg();
     spi_hdl.test_wr_rd_reg();
-    // spi_hdl.test_div_clk();
+    spi_hdl.sm_test_div_clk();
     // spi_hdl.spi_flash_id_read();
     // spi_hdl.spi_flash_sector_erase(0);
     // spi_hdl.manu_send_data();

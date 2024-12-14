@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Beijing Institute of Open Source Chip
+// Copyright (c) 2023-2024 Miao Yuchi <miaoyuchi@ict.ac.cn>
 // spi is licensed under Mulan PSL v2.
 // You can use this software according to the terms and conditions of the Mulan PSL v2.
 // You may obtain a copy of Mulan PSL v2 at:
@@ -64,34 +64,36 @@ module spi_core #(
   logic [3:0] s_fsm_state_d, s_fsm_state_q;
   logic [9:0] s_fsm_cnt_d, s_fsm_cnt_q;
   logic s_ce_fsm_low_bound, s_ce_fsm_high_bound;
-  logic s_xfer_flag, s_sg_xfer_done;
+  logic s_xfer_flag;
+  logic [7:0] s_sg_bit_cnt_d, s_sg_bit_cnt_q;
   // clk
   logic [7:0] s_div_val, s_clk_cnt;
   logic s_spi_clk, s_clk_fir_edge_trg, s_clk_sec_edge_trg;
   // tx data
-  logic s_tx_shift_1_ld, s_tx_shift_2_ld, s_tx_shift_4_ld;
-  logic       s_tx_trg;
+  logic       s_xfer_trg;
   logic       s_tx_shift_1_dat;
   logic [1:0] s_tx_shift_2_dat;
   logic [3:0] s_tx_shift_4_dat;
-  logic [7:0] s_tx_data;
+  // xfer
+  logic [7:0] s_xfer_cmd_d, s_xfer_cmd_q;
+  logic [31:0] s_xfer_addr_d, s_xfer_addr_q;
+  logic [31:0] s_xfer_altr_d, s_xfer_altr_q;
+  logic [7:0] s_xfer_wr_data_d, s_xfer_wr_data_q;
 
   // assign
   assign s_ce_fsm_low_bound  = s_fsm_state_q > `SPI_FSM_TCSP;
   assign s_ce_fsm_high_bound = s_fsm_state_q < `SPI_FSM_TCHD;
-  assign s_sg_xfer_done      = s_fsm_cnt_q == '0 && 1'b1;  // TODO:
-  assign s_tx_trg            = '0;
 
-  assign spi_sck_o           = s_ce_fsm_low_bound && s_ce_fsm_high_bound ? s_spi_clk : '0;
   assign busy_o              = ~(s_fsm_state_q == `SPI_FSM_IDLE);
-  assign tx_ready_o          = busy_o;
-  assign rx_valid_o          = busy_o;
+  assign tx_ready_o          = busy_o;  // TODO: only in data phase
+  assign rx_valid_o          = busy_o;  // TODO: only in data phase
   assign rx_data_o           = '0;
 
   // software nss ctrl is more flexible
   assign s_xfer_flag         = ~(s_fsm_state_q == `SPI_FSM_IDLE || s_fsm_state_q == `SPI_FSM_RECY);
   assign s_nss_sel           = (nss_i & {4{s_xfer_flag & ass_i}}) | (nss_i & {4{~ass_i}});
   assign spi_nss_o           = ~(s_nss_sel[`SPI_NSS_NUM-1:0] ^ csv_i[`SPI_NSS_NUM-1:0]);
+  assign spi_sck_o           = s_ce_fsm_low_bound && s_ce_fsm_high_bound ? s_spi_clk : cpol_i;
 
   always_comb begin
     s_div_val = 8'd1;
@@ -112,8 +114,8 @@ module spi_core #(
       .clk_i        (clk_i),
       .rst_n_i      (rst_n_i),
       .div_i        (s_div_val),
-      .div_valid_i  (~s_xfer_flag),
       .clk_init_i   (cpol_i),
+      .div_valid_i  (~s_xfer_flag),
       .div_ready_o  (),
       .div_done_o   (),
       .clk_cnt_o    (s_clk_cnt),
@@ -137,16 +139,16 @@ module spi_core #(
         end
       end
       `SPI_FSM_TCSP: begin
-        if (s_sg_xfer_done) begin
+        if (s_fsm_cnt_q == '0) begin
           if (cmode_i != `SPI_MODE_SKIP) begin
             s_fsm_state_d = `SPI_FSM_CMD;
             s_fsm_cnt_d   = 10'd1;
           end else if (amode_i != `SPI_MODE_SKIP) begin
             s_fsm_state_d = `SPI_FSM_ADDR;
-            s_fsm_cnt_d   = {8'd0, asize_i};
+            s_fsm_cnt_d   = {8'd0, asize_i + 2'd1};
           end else if (almode_i != `SPI_MODE_SKIP) begin
             s_fsm_state_d = `SPI_FSM_ALTR;
-            s_fsm_cnt_d   = {8'd0, alsize_i};
+            s_fsm_cnt_d   = {8'd0, alsize_i + 2'd1};
           end else if (nop_i != '0) begin
             s_fsm_state_d = `SPI_FSM_NOP;
             s_fsm_cnt_d   = nop_i;
@@ -160,13 +162,13 @@ module spi_core #(
         end
       end
       `SPI_FSM_CMD: begin
-        if (s_sg_xfer_done) begin
+        if (s_fsm_cnt_q == '0) begin
           if (amode_i != `SPI_MODE_SKIP) begin
             s_fsm_state_d = `SPI_FSM_ADDR;
-            s_fsm_cnt_d   = {8'd0, asize_i};
+            s_fsm_cnt_d   = {8'd0, asize_i + 2'd1};
           end else if (almode_i != `SPI_MODE_SKIP) begin
             s_fsm_state_d = `SPI_FSM_ALTR;
-            s_fsm_cnt_d   = {8'd0, alsize_i};
+            s_fsm_cnt_d   = {8'd0, alsize_i + 2'd1};
           end else if (nop_i != '0) begin
             s_fsm_state_d = `SPI_FSM_NOP;
             s_fsm_cnt_d   = nop_i;
@@ -176,14 +178,14 @@ module spi_core #(
             s_fsm_cnt_d = trl_i;
           end else s_fsm_state_d = `SPI_FSM_TCHD;
         end else begin
-          if (s_clk_sec_edge_trg) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
+          if (s_sg_bit_cnt_q == 8'd7) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
         end
       end
       `SPI_FSM_ADDR: begin
-        if (s_sg_xfer_done) begin
+        if (s_fsm_cnt_q == '0) begin
           if (almode_i != `SPI_MODE_SKIP) begin
             s_fsm_state_d = `SPI_FSM_ALTR;
-            s_fsm_cnt_d   = {8'd0, alsize_i};
+            s_fsm_cnt_d   = {8'd0, alsize_i + 2'd1};
           end else if (nop_i != '0) begin
             s_fsm_state_d = `SPI_FSM_NOP;
             s_fsm_cnt_d   = nop_i;
@@ -193,11 +195,11 @@ module spi_core #(
             s_fsm_cnt_d = trl_i;
           end else s_fsm_state_d = `SPI_FSM_TCHD;
         end else begin
-          if (s_clk_sec_edge_trg) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
+          if (s_sg_bit_cnt_q == 8'd7) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
         end
       end
       `SPI_FSM_ALTR: begin
-        if (s_sg_xfer_done) begin
+        if (s_fsm_cnt_q == '0) begin
           if (nop_i != '0) begin
             s_fsm_state_d = `SPI_FSM_NOP;
             s_fsm_cnt_d   = nop_i;
@@ -207,50 +209,50 @@ module spi_core #(
             s_fsm_cnt_d = trl_i;
           end else s_fsm_state_d = `SPI_FSM_TCHD;
         end else begin
-          if (s_clk_sec_edge_trg) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
+          if (s_sg_bit_cnt_q == 8'd7) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
         end
       end
       `SPI_FSM_NOP: begin
-        if (s_sg_xfer_done) begin
+        if (s_fsm_cnt_q == '0) begin
           if (dmode_i != `SPI_MODE_SKIP) begin
             if (rwm_i) s_fsm_state_d = `SPI_FSM_RDATA;
             else s_fsm_state_d = `SPI_FSM_WDATA;
             s_fsm_cnt_d = trl_i;
           end else s_fsm_state_d = `SPI_FSM_TCHD;
         end else begin
-          if (s_clk_sec_edge_trg) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
+          if (s_sg_bit_cnt_q == 8'd7) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
         end
       end
       `SPI_FSM_WDATA: begin
-        if (s_sg_xfer_done) begin
+        if (s_fsm_cnt_q == '0) begin
           s_fsm_state_d = `SPI_FSM_TCHD;
           s_fsm_cnt_d   = tchd_i;
         end else begin
-          if (s_clk_sec_edge_trg) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
+          if (s_sg_bit_cnt_q == 8'd7) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
         end
       end
       `SPI_FSM_RDATA: begin
-        if (s_sg_xfer_done) begin
+        if (s_fsm_cnt_q == '0) begin
           s_fsm_state_d = `SPI_FSM_TCHD;
           s_fsm_cnt_d   = tchd_i;
         end else begin
-          if (s_clk_sec_edge_trg) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
+          if (s_sg_bit_cnt_q == 8'd7) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
         end
       end
       `SPI_FSM_TCHD: begin
-        if (s_sg_xfer_done) begin
+        if (s_fsm_cnt_q == '0) begin
           s_fsm_state_d = `SPI_FSM_RECY;
           s_fsm_cnt_d   = recy_i;
         end else begin
-          if (s_clk_sec_edge_trg) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
+          if (s_sg_bit_cnt_q == 8'd7) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
         end
       end
       `SPI_FSM_RECY: begin
-        if (s_sg_xfer_done) begin
+        if (s_fsm_cnt_q == '0) begin
           s_fsm_state_d = `SPI_FSM_IDLE;
           s_fsm_cnt_d   = '1;
         end else begin
-          if (s_clk_sec_edge_trg) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
+          if (s_sg_bit_cnt_q == 8'd7) s_fsm_cnt_d = s_fsm_cnt_q - 1'b1;
         end
       end
       default: begin
@@ -259,7 +261,7 @@ module spi_core #(
       end
     endcase
   end
-  dffr #(4) u_spi_fsm_dffr (
+  dffr #(4) u_fsm_state_dffr (
       clk_i,
       rst_n_i,
       s_fsm_state_d,
@@ -505,59 +507,110 @@ module spi_core #(
   end
 
 
-
-  assign s_tx_shift_1_ld = '0;
-  assign s_tx_shift_2_ld = '0;
-  assign s_tx_shift_4_ld = '0;
   always_comb begin
-    s_tx_data = '0;
+    s_sg_bit_cnt_d = s_sg_bit_cnt_q;
+    if (busy_o && s_fsm_cnt_q) begin
+      if (s_sg_bit_cnt_q == 8'd7) s_sg_bit_cnt_d = 8'd0;
+      else if (s_xfer_trg) s_sg_bit_cnt_d = s_sg_bit_cnt_q + 1'b1;
+    end
   end
-  shift_reg #(
-      .DATA_WIDTH(8),
-      .SHIFT_NUM (1)
-  ) u_std_spi_tx_shift_reg (
-      .clk_i     (clk_i),
-      .rst_n_i   (rst_n_i),
-      .type_i    (`SHIFT_REG_TYPE_LOGIC),
-      .dir_i     ({1'b0, lsb_i}),
-      .ld_en_i   (s_tx_shift_1_ld),
-      .sft_en_i  (s_tx_trg),
-      .ser_dat_i ('0),
-      .par_data_i(s_tx_data),
-      .ser_dat_o (s_tx_shift_1_dat),
-      .par_data_o()
+  dffr #(8) u_sg_bit_cnt_dffr (
+      clk_i,
+      rst_n_i,
+      s_sg_bit_cnt_d,
+      s_sg_bit_cnt_q
   );
 
-  shift_reg #(
-      .DATA_WIDTH(8),
-      .SHIFT_NUM (2)
-  ) u_dual_spi_tx_shift_reg (
-      .clk_i     (clk_i),
-      .rst_n_i   (rst_n_i),
-      .type_i    (`SHIFT_REG_TYPE_LOGIC),
-      .dir_i     ({1'b0, lsb_i}),
-      .ld_en_i   (s_tx_shift_2_ld),
-      .sft_en_i  (s_tx_trg),
-      .ser_dat_i ('0),
-      .par_data_i(s_tx_data),
-      .ser_dat_o (s_tx_shift_2_dat),
-      .par_data_o()
+
+  assign s_xfer_trg = cpha_i ? s_clk_fir_edge_trg : s_clk_sec_edge_trg;
+  always_comb begin
+    s_tx_shift_1_dat = '0;
+    unique case (s_fsm_state_q)
+      `SPI_FSM_IDLE:  s_tx_shift_1_dat = '0;
+      `SPI_FSM_TCSP:  s_tx_shift_1_dat = '0;
+      `SPI_FSM_CMD:   s_tx_shift_1_dat = s_xfer_cmd_q[7];
+      `SPI_FSM_ADDR:  s_tx_shift_1_dat = s_xfer_addr_q[31];
+      `SPI_FSM_ALTR:  s_tx_shift_1_dat = s_xfer_altr_q[31];
+      `SPI_FSM_NOP:   s_tx_shift_1_dat = '0;
+      `SPI_FSM_WDATA: s_tx_shift_1_dat = s_xfer_wr_data_q[7];
+      `SPI_FSM_RDATA: s_tx_shift_1_dat = '0;
+      `SPI_FSM_TCHD:  s_tx_shift_1_dat = '0;
+      `SPI_FSM_RECY:  s_tx_shift_1_dat = '0;
+    endcase
+  end
+
+  // NOTE: no support dual and quad spi
+  assign s_tx_shift_2_dat = '0;
+  assign s_tx_shift_4_dat = '0;
+
+  // cmd shift reg
+  always_comb begin
+    if (s_fsm_state_q == `SPI_FSM_CMD) s_xfer_cmd_d = {s_xfer_cmd_q[6:0], 1'd0};
+    else s_xfer_cmd_d = cmd_i;
+  end
+  dffer #(8) u_xfer_cmd_dffer (
+      clk_i,
+      rst_n_i,
+      s_xfer_trg,
+      s_xfer_cmd_d,
+      s_xfer_cmd_q
   );
 
-  shift_reg #(
-      .DATA_WIDTH(8),
-      .SHIFT_NUM (4)
-  ) u_quad_spi_tx_shift_reg (
-      .clk_i     (clk_i),
-      .rst_n_i   (rst_n_i),
-      .type_i    (`SHIFT_REG_TYPE_LOGIC),
-      .dir_i     ({1'b0, lsb_i}),
-      .ld_en_i   (s_tx_shift_4_ld),
-      .sft_en_i  (s_tx_trg),
-      .ser_dat_i ('0),
-      .par_data_i(s_tx_data),
-      .ser_dat_o (s_tx_shift_4_dat),
-      .par_data_o()
+  // addr shift reg
+  always_comb begin
+    if (s_fsm_state_q == `SPI_FSM_ADDR) s_xfer_addr_d = {s_xfer_addr_q[31:0], 1'd0};
+    else begin
+      unique case (asize_i)
+        `SPI_TRANS_8_BITS:  s_xfer_addr_d = {addr_i[7:0], 24'd0};
+        `SPI_TRANS_16_BITS: s_xfer_addr_d = {addr_i[15:0], 16'd0};
+        `SPI_TRANS_24_BITS: s_xfer_addr_d = {addr_i[23:0], 8'd0};
+        `SPI_TRANS_32_BITS: s_xfer_addr_d = addr_i;
+        default:            s_xfer_addr_d = {addr_i[7:0], 24'd0};
+      endcase
+    end
+  end
+  dffer #(32) u_xfer_addr_dffer (
+      clk_i,
+      rst_n_i,
+      s_xfer_trg,
+      s_xfer_addr_d,
+      s_xfer_addr_q
+  );
+
+
+  // altr shift reg
+  always_comb begin
+    if (s_fsm_state_q == `SPI_FSM_ALTR) s_xfer_altr_d = {s_xfer_altr_q[31:0], 1'd0};
+    else begin
+      unique case (alsize_i)
+        `SPI_TRANS_8_BITS:  s_xfer_altr_d = {altr_i[7:0], 24'd0};
+        `SPI_TRANS_16_BITS: s_xfer_altr_d = {altr_i[15:0], 16'd0};
+        `SPI_TRANS_24_BITS: s_xfer_altr_d = {altr_i[23:0], 8'd0};
+        `SPI_TRANS_32_BITS: s_xfer_altr_d = altr_i;
+        default:            s_xfer_altr_d = {altr_i[7:0], 24'd0};
+      endcase
+    end
+  end
+  dffer #(32) u_xfer_altr_dffer (
+      clk_i,
+      rst_n_i,
+      s_xfer_trg,
+      s_xfer_altr_d,
+      s_xfer_altr_q
+  );
+
+
+  // wr data shift reg
+  always_comb begin
+    if (s_fsm_state_q == `SPI_FSM_WDATA) s_xfer_wr_data_d = {s_xfer_wr_data_q[6:0], 1'd0};
+    else s_xfer_wr_data_d = tx_data_i;
+  end
+  dffer #(8) u_xfer_wr_data_dffer (
+      clk_i,
+      rst_n_i,
+      s_xfer_trg,
+      s_xfer_wr_data_d,
+      s_xfer_wr_data_q
   );
 
   edge_det_sync_re u_xfer_done_edge_det_sync_re (

@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Beijing Institute of Open Source Chip
+// Copyright (c) 2023-2024 Miao Yuchi <miaoyuchi@ict.ac.cn>
 // spi is licensed under Mulan PSL v2.
 // You can use this software according to the terms and conditions of the Mulan PSL v2.
 // You may obtain a copy of Mulan PSL v2 at:
@@ -34,7 +34,7 @@ class SPITest extends APB4Master;
   extern task automatic spi_flash_sector_erase(bit [31:0] sect_addr);
   extern task automatic test_reset_reg();
   extern task automatic test_wr_rd_reg(input bit [31:0] run_times = 1000);
-  extern task automatic test_div_clk();
+  extern task automatic sm_test_div_clk();
   extern task automatic manu_send_data();
   extern task automatic single_8_data_wr_test();
   extern task automatic w25q_std_spi_wr_rd_test();
@@ -57,21 +57,22 @@ task automatic SPITest::init_common_cfg();
   bit [31:0] ctrl_val = '0, fmt_val = '0, frame_val = '0;
 
   this.write(`SPI_CTRL_ADDR, ctrl_val);
-  ctrl_val[5] = 1'b1;
+  this.write(`SPI_FMT_ADDR, fmt_val);
+  this.write(`SPI_FRAME_ADDR, frame_val);
   this.write(`SPI_CTRL_ADDR, ctrl_val);
-  fmt_val[0]    = 1'b0;  // cpol
-  fmt_val[1]    = 1'b0;  // cpha
+  fmt_val[0]    = 1'b0;  // cpha
+  fmt_val[1]    = 1'b0;  // cpol
   fmt_val[4]    = 1'b1;  // ass
   fmt_val[16:9] = 8'd0;  // div2
   this.write(`SPI_FMT_ADDR, fmt_val);
-  frame_val[1:0]   = 2'd1;  // cmode
-  frame_val[3:2]   = 2'd1;  // amode
-  frame_val[5:4]   = 2'd3;  // asize
-  frame_val[7:6]   = 2'd0;  // almode
-  frame_val[9:8]   = 2'd0;  // alsize
-  frame_val[11:10] = 2'd1;  // dmode
-  frame_val[13:12] = 2'd0;  // dsize
-  frame_val[21:14] = 8'd4;  // recy
+  frame_val[1:0]   = 2'd1;  // cmode:  spi
+  frame_val[3:2]   = 2'd1;  // amode:  spi
+  frame_val[5:4]   = 2'd3;  // asize:  32b
+  frame_val[7:6]   = 2'd0;  // almode: skip
+  frame_val[9:8]   = 2'd0;  // alsize: skip
+  frame_val[11:10] = 2'd1;  // dmode:  spi
+  frame_val[13:12] = 2'd0;  // dsize:  8b
+  frame_val[21:14] = 8'd4;  // recy 
   frame_val[23:22] = 2'd1;  // tcsp
   frame_val[25:24] = 2'd1;  // tchd
   this.write(`SPI_FRAME_ADDR, frame_val);
@@ -107,17 +108,22 @@ task automatic SPITest::test_wr_rd_reg(input bit [31:0] run_times = 1000);
   // verilog_format: on
 endtask
 
-task automatic SPITest::test_div_clk();
+task automatic SPITest::sm_test_div_clk();
   bit [31:0] ctrl_val = '0;
-
-  this.init_common_cfg();
   repeat (200) @(posedge this.apb4.pclk);
-  $display("[%t]=== [test div clk] ===", $time);
+  this.init_common_cfg();
+  $display("[%t]=== [sm test div clk] ===", $time);
 
   ctrl_val[0] = 1'b1;
   ctrl_val[3] = 1'b1;
   ctrl_val[5] = 1'b1;
+  this.write(`SPI_CMD_ADDR, 8'hDD);
+  this.write(`SPI_ADDR_ADDR, 32'h1234_5678);
+  this.write(`SPI_ALTR_ADDR, '0);
+  this.write(`SPI_NOP_ADDR, '0);
+  this.write(`SPI_TRL_ADDR, '0);
   this.write(`SPI_CTRL_ADDR, ctrl_val);
+
   repeat (200) @(posedge this.apb4.pclk);
 endtask
 
