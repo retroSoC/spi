@@ -227,7 +227,7 @@ module spi_core #(
       .ready_o(spi_ctrl_data_rx_ready)
   );
 
-  spi_controller u_spictrl (
+  spi_ctrl u_spictrl (
       .clk                   (HCLK),
       .rstn                  (HRESETn),
       .eot                   (s_eot),

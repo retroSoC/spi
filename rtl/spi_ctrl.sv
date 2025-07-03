@@ -116,14 +116,14 @@ module spi_ctrl (
   assign en_quad = (spi_qrd | spi_qwr) | en_quad_int;
 
   spi_clkgen u_clkgen (
-      .clk          (clk),
-      .rstn         (rstn),
-      .en           (spi_clock_en),
-      .clk_div      (spi_clk_div),
-      .clk_div_valid(spi_clk_div_valid),
-      .spi_clk      (spi_clk),
-      .spi_fall     (spi_fall),
-      .spi_rise     (spi_rise)
+      .clk_i          (clk),
+      .rst_n_i        (rstn),
+      .en_i           (spi_clock_en),
+      .clk_div_i      (spi_clk_div),
+      .clk_div_valid_i(spi_clk_div_valid),
+      .spi_clk_o      (spi_clk),
+      .spi_fall_o     (spi_fall),
+      .spi_rise_o     (spi_rise)
   );
 
   spi_tx u_txreg (

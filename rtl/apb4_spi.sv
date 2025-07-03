@@ -17,9 +17,9 @@ module apb4_spi #(
     spi_if.dut    spi
 );
 
-  spi_master #(
+  spi_core #(
       .BUFFER_DEPTH(FIFO_DEPTH)
-  ) u_spi_master (
+  ) u_spi_core (
       .HCLK    (apb4.pclk),
       .HRESETn (apb4.presetn),
       .PADDR   (apb4.paddr[11:0]),
