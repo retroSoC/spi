@@ -19,7 +19,7 @@
 `define SPI_QUAD_TX 2'b01
 `define SPI_QUAD_RX 2'b10
 
-module apb_spi_master
+module spi_master
 #(
     parameter BUFFER_DEPTH   = 10,
     parameter APB_ADDR_WIDTH = 12  //APB slaves are 4KB by default
