@@ -115,7 +115,7 @@ module spi_master_controller (
 
     assign en_quad = (spi_qrd | spi_qwr) | en_quad_int;
   
-    spi_master_clkgen u_clkgen
+    spi_clkgen u_clkgen
     (
       .clk           ( clk               ),
       .rstn          ( rstn              ),
