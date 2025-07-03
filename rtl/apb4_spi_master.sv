@@ -1,5 +1,3 @@
-`include "register.sv"
-`include "fifo.sv"
 `include "spi_define.sv"
 
 module apb4_spi #(
