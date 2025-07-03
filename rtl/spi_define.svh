@@ -90,7 +90,7 @@
 `define SPI_QUAD_SPI 2'b10
 `define SPI_QSPI     2'b11
 
-`define SPI_NSS_NUM       1
+`define SPI_NSS_NUM       4
 `define SPI_TRANS_8_BITS  2'b00
 `define SPI_TRANS_16_BITS 2'b01
 `define SPI_TRANS_24_BITS 2'b10
