@@ -8,7 +8,7 @@
 // MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 // See the Mulan PSL v2 for more details.
 
-// `include "spi_define.svh"
+`include "spi_define.svh"
 
 module apb4_spi #(
     parameter int FIFO_DEPTH = 64
