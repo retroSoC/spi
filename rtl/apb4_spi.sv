@@ -11,7 +11,7 @@
 `include "spi_define.svh"
 
 module apb4_spi #(
-    parameter int FIFO_DEPTH = 64
+    parameter int FIFO_DEPTH = 32
 ) (
     apb4_if.slave apb4,
     spi_if.dut    spi
