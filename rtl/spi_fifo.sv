@@ -37,7 +37,7 @@ module spi_fifo #(
   reg [LOG_BUFFER_DEPTH - 1:0] pointer_in;  // location to which we last wrote
   reg [LOG_BUFFER_DEPTH - 1:0] pointer_out;  // location from which we last sent
   reg [LOG_BUFFER_DEPTH:0] elements;  // number of elements in the buffer
-  reg [DATA_WIDTH - 1:0] buffer[BUFFER_DEPTH - 1:0];
+  reg [DATA_WIDTH - 1:0] buffer[BUFFER_DEPTH:0];
 
 
   wire full;
@@ -82,7 +82,7 @@ module spi_fifo #(
       // ------------------------------------
       // We have some input, increase by 1 the input pointer		
       if (valid_i && !full) begin
-        if (pointer_in == $unsigned(BUFFER_DEPTH - 1)) pointer_in <= 0;
+        if (pointer_in == BUFFER_DEPTH - 1) pointer_in <= 0;
         else pointer_in <= pointer_in + 1;
       end
       // Else we don't have any input, the input pointer stays the same
@@ -92,7 +92,7 @@ module spi_fifo #(
       // -------------------------------------
       // We had pushed one flit out, we can try to go for the next one
       if (ready_i && valid_o) begin
-        if (pointer_out == $unsigned(BUFFER_DEPTH - 1)) pointer_out <= 0;
+        if (pointer_out == BUFFER_DEPTH - 1) pointer_out <= 0;
         else pointer_out <= pointer_out + 1;
       end
       // Else stay on the same output location

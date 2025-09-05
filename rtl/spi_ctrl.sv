@@ -224,7 +224,7 @@ module spi_ctrl (
 
           if (spi_cmd_len != 0) begin
             s_spi_mode       = (spi_qrd | spi_qwr) ? `SPI_QUAD_TX : `SPI_STD;
-            counter_tx       = {8'h00, spi_cmd_len};
+            counter_tx       = {10'h00, spi_cmd_len};
             counter_tx_valid = 1'b1;
             ctrl_data_mux    = DATA_CMD;
             ctrl_data_valid  = 1'b1;
@@ -232,7 +232,7 @@ module spi_ctrl (
             state_next       = CMD;
           end else if (spi_addr_len != 0) begin
             s_spi_mode       = (spi_qrd | spi_qwr) ? `SPI_QUAD_TX : `SPI_STD;
-            counter_tx       = {8'h00, spi_addr_len};
+            counter_tx       = {10'h00, spi_addr_len};
             counter_tx_valid = 1'b1;
             ctrl_data_mux    = DATA_ADDR;
             ctrl_data_valid  = 1'b1;
@@ -286,7 +286,7 @@ module spi_ctrl (
         if (tx_done) begin
           if (spi_addr_len != 0) begin
             s_spi_mode       = (en_quad) ? `SPI_QUAD_TX : `SPI_STD;
-            counter_tx       = {8'h00, spi_addr_len};
+            counter_tx       = {10'h00, spi_addr_len};
             counter_tx_valid = 1'b1;
             ctrl_data_mux    = DATA_ADDR;
             ctrl_data_valid  = 1'b1;

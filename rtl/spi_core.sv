@@ -116,7 +116,7 @@ module spi_core #(
   assign s_rise_int_rx = s_int_en & (elements_rx > s_th_rx);
 
   assign events_o = s_rise_int_tx | s_rise_int_rx;
-  assign s_int_status = {s_rise_int_rx, s_rise_int_tx};
+  assign s_int_status = {30'd0, s_rise_int_rx, s_rise_int_tx};
 
   always @(*) begin
     case (spi_mode)
