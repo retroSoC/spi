@@ -140,6 +140,7 @@ module spi_apb_if #(
           spi_int_th_rx <= PWDATA[8+LOG_BUFFER_DEPTH:8];
           spi_int_en    <= PWDATA[31];
         end
+        default: ;
       endcase
     end else begin
       spi_swrst         <= 1'b0;

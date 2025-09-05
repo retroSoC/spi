@@ -119,11 +119,6 @@ module spi_core #(
   assign s_int_status = {s_rise_int_rx, s_rise_int_tx};
 
   always @(*) begin
-    spi_oe0 = 1'b0;
-    spi_oe1 = 1'b0;
-    spi_oe2 = 1'b0;
-    spi_oe3 = 1'b0;
-
     case (spi_mode)
       `SPI_STD: begin
         spi_oe0 = 1'b1;
@@ -138,6 +133,12 @@ module spi_core #(
         spi_oe3 = 1'b1;
       end
       `SPI_QUAD_RX: begin
+        spi_oe0 = 1'b0;
+        spi_oe1 = 1'b0;
+        spi_oe2 = 1'b0;
+        spi_oe3 = 1'b0;
+      end
+      default: begin
         spi_oe0 = 1'b0;
         spi_oe1 = 1'b0;
         spi_oe2 = 1'b0;
