@@ -405,7 +405,7 @@ begin :read_opcode
     if(cmd_byte != `CMD_CHIP_RESET)
         flag_enable_reset = 0;     // Ensure that ENABLE_RESET immediately precedes CHIP_RESET
 
-    $display("\nCommand = %h", cmd_byte);
+    // $display("\nCommand = %h", cmd_byte);
 
     case (cmd_byte)    // Now dispatch the correct function
 
@@ -1188,7 +1188,7 @@ begin :read_opcode
         default :
         begin
             $display("Invalid Opcode. (%0h)",cmd_byte);
-            $stop;
+            // $stop;
         end
     endcase
 end
