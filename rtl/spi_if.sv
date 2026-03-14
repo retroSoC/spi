@@ -15,26 +15,20 @@
 `include "spi_define.svh"
 
 interface spi_if ();
-  logic spi_sck_o;
-  logic spi_nss_o;
-  logic spi_mosi_o;
-  logic spi_miso_i;
+  logic sck_o;
+  logic nss_o;
+  logic mosi_o;
+  logic miso_i;
   logic irq_o;
 
-  modport dut(
-      output spi_sck_o,
-      output spi_nss_o,
-      output spi_mosi_o,
-      input spi_miso_i,
-      output irq_o
-  );
+  modport dut(output sck_o, output nss_o, output mosi_o, input miso_i, output irq_o);
 
   // verilog_format: off
   modport tb(
-      input spi_sck_o,
-      input spi_nss_o,
-      input spi_mosi_o,
-      output spi_miso_i,
+      input sck_o,
+      input nss_o,
+      input mosi_o,
+      output miso_i,
       input irq_o
   );
   // verilog_format: on

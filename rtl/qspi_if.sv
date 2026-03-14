@@ -15,16 +15,16 @@
 `include "spi_define.svh"
 
 interface qspi_if ();
-  logic                    spi_sck_o;
-  logic [`SPI_NSS_NUM-1:0] spi_nss_o;
+  logic                    sck_o;
+  logic [`SPI_NSS_NUM-1:0] nss_o;
   logic [             3:0] spi_io_en_o;
   logic [             3:0] spi_io_in_i;
   logic [             3:0] spi_io_out_o;
   logic                    irq_o;
 
   modport dut(
-      output spi_sck_o,
-      output spi_nss_o,
+      output sck_o,
+      output nss_o,
       output spi_io_en_o,
       input spi_io_in_i,
       output spi_io_out_o,
@@ -33,8 +33,8 @@ interface qspi_if ();
 
   // verilog_format: off
   modport tb(
-      input spi_sck_o,
-      input spi_nss_o,
+      input sck_o,
+      input nss_o,
       input spi_io_en_o,
       output spi_io_in_i,
       input spi_io_out_o,
