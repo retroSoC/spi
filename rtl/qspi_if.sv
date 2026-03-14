@@ -17,17 +17,17 @@
 interface qspi_if ();
   logic                    sck_o;
   logic [`SPI_NSS_NUM-1:0] nss_o;
-  logic [             3:0] spi_io_en_o;
-  logic [             3:0] spi_io_in_i;
-  logic [             3:0] spi_io_out_o;
+  logic [             3:0] io_oe_o;
+  logic [             3:0] io_di_i;
+  logic [             3:0] io_do_o;
   logic                    irq_o;
 
   modport dut(
       output sck_o,
       output nss_o,
-      output spi_io_en_o,
-      input spi_io_in_i,
-      output spi_io_out_o,
+      output io_oe_o,
+      input io_di_i,
+      output io_do_o,
       output irq_o
   );
 
@@ -35,9 +35,9 @@ interface qspi_if ();
   modport tb(
       input sck_o,
       input nss_o,
-      input spi_io_en_o,
-      output spi_io_in_i,
-      input spi_io_out_o,
+      input io_oe_o,
+      output io_di_i,
+      input io_do_o,
       input irq_o
   );
   // verilog_format: on
