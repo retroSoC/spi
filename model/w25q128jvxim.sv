@@ -57,7 +57,7 @@ reg lock_array[0:NUM_LOCKBITS-1];                                             //
 
 reg [23:0] status_reg;              // Status Register
 reg [23:0] status_reg_shadow;       // Status Register Shadow Register
-reg status_reg_otp [23:0];            // Status Register OTP Bits
+reg status_reg_otp [0:23];            // Status Register OTP Bits
 reg [23:0] byte_address;           // Page address used for reading pages.
 reg [23:0] prog_byte_address;         // Page address used for writing pages.
 reg [7:0] mode_reg;               // Mode Register
